@@ -9,13 +9,15 @@
 //*************************************************************************************************************************************
 //
 // Used Help from https://www.codedrome.com/one-dimensional-cellular-automata-in-c/ -My reference for C knowledge and setup :P
-// Full Disclosure: This is the least optimized code you will ever have the misfortune of reading
+// 
 //
 //*************************************************************************************************************************************
 
 static void setRules(ca1d *ca);
 static void cellState(ca1d *ca);
 
+
+// Initialize cells
 ca1d* ca_init(int cell_count, int gens, char *init_state, unsigned char rule, void(*printCell)(ca1d *ca)){
     ca1d *ca = malloc(sizeof(ca1d));
 
@@ -28,7 +30,6 @@ ca1d* ca_init(int cell_count, int gens, char *init_state, unsigned char rule, vo
                 .rule = rule,
                 .gens = gens,
                 .gen = 0,
-                .rule_bytes = "",
                 .printCell = printCell,
         };
         //Copy initial state to cells, feed old data to print
@@ -36,7 +37,7 @@ ca1d* ca_init(int cell_count, int gens, char *init_state, unsigned char rule, vo
             
             setRules(ca);
 
-            for (int i; i<ca->cell_count; i++){
+            for (int i = 0; i<ca->cell_count; i++){
                 if (init_state[i] == '0'){
                     ca->cells[i] = '0';
                 }
@@ -59,81 +60,55 @@ ca1d* ca_init(int cell_count, int gens, char *init_state, unsigned char rule, vo
     }
 }
 
+
 static void setRules(ca1d *ca){
-    // Set all the possible outcomes for next state
-    char neighbourhood[4];
+    // Loop over each cell in the array
+    for (int i = 0; i < ca->cell_count; i++) {
+        // Determine the index of the left and right neighbors with wrap-around
+        int leftIndex = (i - 1 + ca->cell_count) % ca->cell_count;
+        int rightIndex = (i + 1) % ca->cell_count;
 
-    for (int i = 0; i < strlen(ca->cells); i++){
-        //setting the neighbourhood
-        neighbourhood[1] = ca->cells[i];
-        neighbourhood[3] = '\0';
-        
-        if (ca->cells[i-1] == '0' || ca->cells[i-1] == '1'){
-            neighbourhood[0] = ca->cells[i-1];
-        }
-        else if (ca->cells[i-1] != '0' || ca->cells[i-1] != '1'){
-            neighbourhood[0] = ca->cells[strlen(ca->cells)-1];
-        }
-        else if (ca->cells[i+1] == '0' || ca->cells[i+1] == '1'){
-            neighbourhood[2] = ca->cells[i-1];
-        }
-        else if (ca->cells[i+1] != '0' || ca->cells[i+1] != '1'){
-            neighbourhood[2] = ca->cells[0];
-        }
+        // Extract the states of the left, current, and right cells
+        int left = ca->cells[leftIndex] - '0';  // Convert char to int
+        int self = ca->cells[i] - '0';          
+        int right = ca->cells[rightIndex] - '0';
 
-        // Rule 30 
-        for (int j = 0; j < strlen(ca->cells); j++){
-            if (neighbourhood[0] == '0'){
-                if (neighbourhood[1] == '0'){
-                    if (neighbourhood[2] == '0'){
-                        ca->rule = '0';
-                    }
-                    else if (neighbourhood[2] == '1'){
-                        ca->rule = '1';
-                    }
-                }
-                else if (neighbourhood[1] == '1'){
-                    if (neighbourhood[2] == '0'){
-                        ca->rule = '1';
-                    }
-                    else if (neighbourhood[2] == '1'){
-                        ca->rule = '1';
-                    }
-                }
-            }
-            else if (neighbourhood[0] == '1'){
-                if (neighbourhood[1] == '0'){
-                    if (neighbourhood[2] == '0'){
-                        ca->rule = '1';
-                    }
-                    else if (neighbourhood[2] == '1'){
-                        ca->rule = '0';
-                    }
-                }
-                else if (neighbourhood[1] == '1'){
-                    if (neighbourhood[2] == '0'){
-                        ca->rule = '0';
-                    }
-                    else if (neighbourhood[2] == '1'){
-                        ca->rule = '0';
-                    }
-                }
-            }
-            ca->next_state[j] = ca->rule;
-        }  
+        // Combine the states to form a 3-bit pattern
+        int pattern = (left << 2) | (self << 1) | right;
+
+        // Use the pattern to extract the corresponding bit from the rule
+        // The bit extracted determines the next state of the cell
+        ca->next_state[i] = ((ca->rule >> pattern) & 1) + '0';  // ANDing with 1 will leave the bit as either only every a 1 or 0, and conversion back to char
     }
 }
-    
+
     
 
 static void cellState(ca1d *ca){
-    for (int i = 0; i < strlen(ca->cells); i++){
-            
-        }
+     // Copy the next state of each cell to the current state
+    for (int i = 0; i < ca->cell_count; i++) {
+        ca->cells[i] = ca->next_state[i];
+    }
 }
 
 void ca_start(ca1d *ca){
+    // Run the simulation for the specified number of generations
+    for (int gen = 0; gen < ca->gens; gen++) {
+        // Apply the rules to determine the next state for each cell
+        setRules(ca);
 
+        // Update the current state of each cell to the next state
+        cellState(ca);
+
+        // If a print function is provided, use it to print the current state
+        if (ca->printCell != NULL) {
+            ca->printCell(ca);
+        }
+
+        // Optionally, delay between gens
+        // printf("Generation %d\n", gen + 1);
+        // getchar(); // Wait for user input to proceed to the next generation
+    }
 }
 
 void ca_free(ca1d *ca){
