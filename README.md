@@ -1,2 +1,2 @@
 # Elementary-Cellular-Automata
-Elementary Cellular Automata in 1D.
+Elementary Cellular Automata in 2D.
